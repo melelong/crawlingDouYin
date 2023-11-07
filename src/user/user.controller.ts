@@ -6,40 +6,35 @@ import {
   Patch,
   Param,
   Delete,
+  Res,
+  Req,
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import * as svgCaptcha from 'svg-captcha';
 
-@Controller({
-  path: 'user',
-  version: '1',
-})
+@Controller('user')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
-  // 添加
-  @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
+  constructor(private readonly userService: UserService) { }
+  @Get('code')
+  createCaptcha(@Req() req: any, @Res() res: any) {
+    const captcha = svgCaptcha.create({
+      size: 4,
+      fontSize: 50,
+      width: 100,
+      height: 40,
+      background: '#cc9966',
+    });
+    req.session.code = captcha.text;
+    res.type('svg');
+    res.send(captcha.data);
   }
-  // 查全部
-  @Get()
-  findAll() {
-    return this.userService.findAll();
-  }
-  // 查单个
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.userService.findOne(+id);
-  }
-  // 修改
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.userService.update(+id, updateUserDto);
-  }
-  // 删除
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.userService.remove(+id);
+  @Post('create')
+  create(@Body() body: any, @Req() req: any) {
+    const isTrue = req.session.code.toLowerCase() === body?.code?.toLowerCase();
+    const res = {
+      code: isTrue ? 200 : 500,
+      msg: isTrue ? '验证码正确' : '验证码错误',
+    };
+    return isTrue ? { ...res, name: body.name } : res;
   }
 }
